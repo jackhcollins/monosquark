@@ -1,0 +1,26 @@
+{
+//========= Macro generated from object: jet_pt/jet P_{T}
+//========= by ROOT version6.18/00
+   
+   TH1F *jet_pt__3 = new TH1F("jet_pt__3","jet P_{T}",100,0,100);
+   jet_pt__3->SetBinContent(101,10);
+   jet_pt__3->SetEntries(10);
+
+   ci = TColor::GetColor("#000099");
+   jet_pt__3->SetLineColor(ci);
+   jet_pt__3->GetXaxis()->SetLabelFont(42);
+   jet_pt__3->GetXaxis()->SetLabelSize(0.035);
+   jet_pt__3->GetXaxis()->SetTitleSize(0.035);
+   jet_pt__3->GetXaxis()->SetTitleOffset(1);
+   jet_pt__3->GetXaxis()->SetTitleFont(42);
+   jet_pt__3->GetYaxis()->SetLabelFont(42);
+   jet_pt__3->GetYaxis()->SetLabelSize(0.035);
+   jet_pt__3->GetYaxis()->SetTitleSize(0.035);
+   jet_pt__3->GetYaxis()->SetTitleFont(42);
+   jet_pt__3->GetZaxis()->SetLabelFont(42);
+   jet_pt__3->GetZaxis()->SetLabelSize(0.035);
+   jet_pt__3->GetZaxis()->SetTitleSize(0.035);
+   jet_pt__3->GetZaxis()->SetTitleOffset(1);
+   jet_pt__3->GetZaxis()->SetTitleFont(42);
+   jet_pt__3->Draw("pdf");
+}
