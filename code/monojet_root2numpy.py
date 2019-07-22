@@ -18,7 +18,7 @@ treeReader = ROOT.ExRootTreeReader(chain)
 numevents = treeReader.GetEntries()
 
 branchParticle = treeReader.UseBranch("Particle")
-branchFatJet = treeReader.UseBranch("FatJet")
+branchFatJet = treeReader.UseBranch("FatJet10")
 branchJet = treeReader.UseBranch("Jet")
 branchEFlowTrack = treeReader.UseBranch("EFlowTrack")
 branchEFlowECal = treeReader.UseBranch("EFlowPhoton")
