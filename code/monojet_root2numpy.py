@@ -11,6 +11,13 @@ num_jet_IDs = 8
 
 inputFile = sys.argv[1]
 outputFile = sys.argv[2]
+R = "12"
+event_type = "VV3body"
+if len(sys.argv) > 3:
+    R = sys.argv[3]
+if len(sys.argv) > 4:
+    event_type = sys.argv[4]
+
 chain = ROOT.TChain("Delphes")
 
 try:
@@ -22,7 +29,7 @@ treeReader = ROOT.ExRootTreeReader(chain)
 numevents = treeReader.GetEntries()
 
 branchParticle = treeReader.UseBranch("Particle")
-branchFatJet = treeReader.UseBranch("FatJet10")
+branchFatJet = treeReader.UseBranch("FatJet" + R)
 branchJet = treeReader.UseBranch("Jet")
 branchEFlowTrack = treeReader.UseBranch("EFlowTrack")
 branchEFlowECal = treeReader.UseBranch("EFlowPhoton")
@@ -50,7 +57,13 @@ print("Number of jets: ", numpass, " from ", numevents, " events.")
 # Fill out the numpy array
 
 jets_np = np.zeros((numpass,200,3 + num_particle_IDs))
-jet_IDs = np.zeros((numpass,num_jet_IDs))
+if event_type == "VV3body":
+    jet_IDs = np.zeros((numpass,num_jet_IDs))
+elif event_type == "Zq":
+    jet_IDs = np.ones(numpass)
+elif event_type == "Zg":
+    jet_IDs = np.zeros(numpass)
+    
 index = 0
 j = 0
 
@@ -68,22 +81,32 @@ try:
             continue
         
         constituents = jet.Constituents
-        particles_np = np.zeros((200,3 + num_particle_IDs))
+        particles_np = np.zeros((consituents.GetEntriesFast(),3 + num_particle_IDs))
         
         for j, particle in enumerate(constituents):
+            if j > 199:
+                break
             particles_np[j] = pTetaphiIDof(particle)
             order = np.flip(np.argsort(particles_np[:,0]))
             particles_np = particles_np[order]
+
+        particles_np_padded = np.zeros((200,3 + num_particle_IDs))
+        if len(particles_np) >= 200:
+            particles_np_padded = particles_np[:200]
+        else:
+            particles_np_padded[:len(particles_np)] = particles_np
             
-        jets_np[index] = particles_np
-        jet_IDs[index] = get_process_ID_VV3body(branchParticle)
+        jets_np[index] = particles_np_padded
+        if event_type == "VV3body":
+            jet_IDs[index] = get_process_ID_VV3body(branchParticle)
 
         index += 1
 except:
     print("\n\nFailed to identify particle.")
     print("Event", event_i)
     print("Particle", j)
-
+    print(particle.ClassName())
+    
 try:
     np.savez(outputFile,
              constituents=jets_np,
