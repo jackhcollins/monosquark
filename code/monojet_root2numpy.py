@@ -81,7 +81,7 @@ try:
             continue
         
         constituents = jet.Constituents
-        particles_np = np.zeros((consituents.GetEntriesFast(),3 + num_particle_IDs))
+        particles_np = np.zeros((constituents.GetEntriesFast(),3 + num_particle_IDs))
         
         for j, particle in enumerate(constituents):
             if j > 199:
