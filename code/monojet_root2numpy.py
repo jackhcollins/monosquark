@@ -23,7 +23,7 @@ chain = ROOT.TChain("Delphes")
 try:
     chain.Add(inputFile)
 except:
-    print("Unable to load file", inputFile)
+    print("Unable to load file", inputFile, flush=True)
     
 treeReader = ROOT.ExRootTreeReader(chain)
 numevents = treeReader.GetEntries()
@@ -52,7 +52,7 @@ for event_i in range(numevents):
     if jet.PT >= 500:
         numpass += 1
 
-print("Number of jets: ", numpass, " from ", numevents, " events.")
+print("Number of jets: ", numpass, " from ", numevents, " events.", flush=True)
 
 # Fill out the numpy array
 
@@ -70,7 +70,7 @@ j = 0
 try:
     for event_i in range(numevents):
         if event_i%1000 is 0:
-            print("Working on event", event_i)
+            print("Working on event", event_i, flush=True)
         treeReader.ReadEntry(event_i)
         numjets = branchFatJet.GetEntriesFast()
         if numjets == 0:
@@ -105,11 +105,11 @@ except:
     print("\n\nFailed to identify particle.")
     print("Event", event_i)
     print("Particle", j)
-    print(particle.ClassName())
+    print(particle.ClassName(), flush=True)
     
 try:
     np.savez(outputFile,
              constituents=jets_np,
              jet_ID=jet_IDs)
 except:
-    print("Unable to save", outputFile)
+    print("Unable to save", outputFile, flush=True)
