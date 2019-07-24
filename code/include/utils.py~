@@ -1,0 +1,44 @@
+import rootpy.ROOT as ROOT
+ROOT.gSystem.Load("libDelphes")
+ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
+ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
+
+def pTof(obj):
+    if isinstance(obj,ROOT.Track):
+        return obj.PT
+    elif isinstance(obj,ROOT.Muon):
+        return obj.PT
+    elif isinstance(obj,ROOT.Electron):
+        return obj.PT
+    elif isinstance(obj,ROOT.Photon):
+        return obj.PT
+    elif isinstance(obj,ROOT.Tower):
+        return obj.ET
+    else:
+        raise
+
+
+def pTetaphiIDof(obj):
+    part_ID = 0
+    if isinstance(obj,ROOT.Tower):
+        if obj.Ehad > obj.Eem:
+            part_ID = 0
+        else:
+            part_ID = 1
+    elif isinstance(obj,ROOT.Track):
+        part_ID = 2
+    elif isinstance(obj,ROOT.Muon):
+        part_ID = 3
+    elif isinstance(obj,ROOT.Electron):
+        part_ID = 4
+    elif isinstance(obj,ROOT.Photon):
+        part_ID = 5
+        
+    part_ID_onehot = np.zeros(6)
+    part_ID_onehot[part_ID] = 1
+            
+    try:
+        return np.append(np.array([pTof(obj),obj.Eta,obj.Phi]),
+                         part_ID_onehot)
+    except:
+        raise

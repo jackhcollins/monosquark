@@ -4,6 +4,10 @@ import numpy as np
 ROOT.gSystem.Load("libDelphes")
 ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
 ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
+from include.utils import pTof, pTetaphiIDof, get_process_ID_VV3body
+
+num_particle_IDs = 6
+num_jet_IDs = 8
 
 inputFile = sys.argv[1]
 outputFile = sys.argv[2]
@@ -27,47 +31,6 @@ branchMuon = treeReader.UseBranch("Muon")
 branchElectron = treeReader.UseBranch("Electron")
 branchPhoton = treeReader.UseBranch("Photon")
 
-def pTof(obj):
-    if isinstance(obj,ROOT.Track):
-        return obj.PT
-    elif isinstance(obj,ROOT.Muon):
-        return obj.PT
-    elif isinstance(obj,ROOT.Electron):
-        return obj.PT
-    elif isinstance(obj,ROOT.Photon):
-        return obj.PT
-    elif isinstance(obj,ROOT.Tower):
-        return obj.ET
-    else:
-        raise
-
-num_IDs = 6
-def pTetaphiIDof(obj):
-    part_ID = 0
-    if isinstance(obj,ROOT.Tower):
-        if obj.Ehad > obj.Eem:
-            part_ID = 0
-        else:
-            part_ID = 1
-    elif isinstance(obj,ROOT.Track):
-        part_ID = 2
-    elif isinstance(obj,ROOT.Muon):
-        part_ID = 3
-    elif isinstance(obj,ROOT.Electron):
-        part_ID = 4
-    elif isinstance(obj,ROOT.Photon):
-        part_ID = 5
-        
-    part_ID_onehot = np.zeros(6)
-    part_ID_onehot[part_ID] = 1
-    
-    
-    try:
-        return np.append(np.array([pTof(obj),obj.Eta,obj.Phi]),
-                         part_ID_onehot)
-    except:
-        raise
-
 
 # Figure out how many good events we have
 numpass = 0
@@ -86,8 +49,10 @@ print("Number of jets: ", numpass, " from ", numevents, " events.")
 
 # Fill out the numpy array
 
-jets_np = np.zeros((numpass,200,3+num_IDs))
+jets_np = np.zeros((numpass,200,3 + num_particle_IDs))
+jet_IDs = np.zeros((numpass,num_jet_IDs))
 index = 0
+j = 0
 
 try:
     for event_i in range(numevents):
@@ -103,7 +68,7 @@ try:
             continue
         
         constituents = jet.Constituents
-        particles_np = np.zeros((200,3+num_IDs))
+        particles_np = np.zeros((200,3 + num_particle_IDs))
         
         for j, particle in enumerate(constituents):
             particles_np[j] = pTetaphiIDof(particle)
@@ -111,6 +76,8 @@ try:
             particles_np = particles_np[order]
             
         jets_np[index] = particles_np
+        jet_IDs[index] = get_process_ID_VV3body(branchParticle)
+
         index += 1
 except:
     print("\n\nFailed to identify particle.")
@@ -118,6 +85,8 @@ except:
     print("Particle", j)
 
 try:
-    np.save(outputFile, jets_np)
+    np.savez(outputFile,
+             constituents=jets_np,
+             jet_ID=jet_IDs)
 except:
     print("Unable to save", outputFile)
