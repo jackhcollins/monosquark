@@ -10,6 +10,7 @@ bottom = np.array([5,-5])
 leptons = np.array([11,13,-11,-13])
 neutrinos = np.array([12,14,16,-12,-14,-16])
 tau = np.array([15,-15])
+photon = np.array([22])
 
 PIDs = {}
 PIDs['q'] = np.array([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,21])
@@ -23,6 +24,7 @@ PIDs['Z'] = np.array([23])
 PIDs['V'] = np.concatenate((PIDs['W'],
                            PIDs['h'],
                            PIDs['Z']))
+PIDs['photon'] = np.array([22])
 
 
 inos = np.append(np.arange(1000023,1000100),np.arange(-1000100,-1000022))
@@ -41,7 +43,8 @@ PIDs['final'] = np.concatenate((PIDs['q'],
                                 PIDs['l'],
                                 PIDs['nu'],
                                 PIDs['tau'],
-                                PIDs['LSP']))
+                                PIDs['LSP'],
+                                PIDs['photon']))
 
 
 def pTof(obj):
@@ -125,36 +128,26 @@ def get_all_daughters(startID,branchParticle,stopnum = -1):
 def update_event_ID(event_ID, PID):
     if np.any(PID == PIDs['W']):
         event_ID['nW'] += 1
-    elif np.any(PID == PIDs['Z']):
+    if np.any(PID == PIDs['Z']):
         event_ID['nZ'] += 1
-    elif np.any(PID == PIDs['h']):
+    if np.any(PID == PIDs['h']):
         event_ID['nh'] += 1
-    elif np.any(PID == PIDs['q']):
+    if np.any(PID == PIDs['q']):
         event_ID['nq'] += 1
-    elif np.any(PID == PIDs['b']):
+    if np.any(PID == PIDs['b']):
         event_ID['nb'] += 1
-    elif np.any(PID == PIDs['l']):
+    if np.any(PID == PIDs['l']):
         event_ID['nl'] += 1
-    elif np.any(PID == PIDs['tau']):
+    if np.any(PID == PIDs['tau']):
         event_ID['ntau'] += 1
-    elif np.any(PID == PIDs['nu']):
+    if np.any(PID == PIDs['nu']):
         event_ID['nnu'] += 1
                 
     return event_ID
 
 
-def get_process_ID_iterate_2prong(winoID,event_ID,branchParticle):
-    
-#     event_ID = np.array(0,dtype=[('nW','int32'),
-#                                  ('nZ','int32'),
-#                                  ('nh','int32'),
-#                                  ('nl','int32'),
-#                                  ('nq','int32'),
-#                                  ('nb','int32'),
-#                                  ('ntau','int32'),
-#                                  ('nnu','int32')])
-
-    
+def get_process_ID_iterate_2prong(winoID,event_ID,branchParticle,debug = False):
+   
     last_wino_ID = find_last(winoID,branchParticle)
     last_wino = branchParticle.At(last_wino_ID)
     
@@ -166,10 +159,11 @@ def get_process_ID_iterate_2prong(winoID,event_ID,branchParticle):
     
     for i, daughter in enumerate(daughters):
         D_PID = daughter.PID
-        print(D_PID)
+        if debug:
+            print(D_PID)
         event_ID = update_event_ID(event_ID,D_PID)
         if not np.any(D_PID == PIDs['final']):
-            event_ID = get_process_ID_iterate_2prong(daughter_IDs[i],event_ID,branchParticle)
+            event_ID = get_process_ID_iterate_2prong(daughter_IDs[i],event_ID,branchParticle,debug)
 
     return event_ID
 
@@ -177,7 +171,7 @@ def get_process_ID_iterate_2prong(winoID,event_ID,branchParticle):
 def get_first_ino_ID(branchParticle):
     
     for i in range(branchParticle.GetEntriesFast()):
-        if np.any(branchParticle.At(i) == PIDs["ino"]):
+        if np.any(branchParticle.At(i).PID == PIDs["ino"]):
             return i
         
     print("Error: Failed to find a -ino")

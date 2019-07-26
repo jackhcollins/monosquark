@@ -5,6 +5,7 @@ ROOT.gSystem.Load("libDelphes")
 ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
 ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
 from include.utils import pTof, pTetaphiIDof, get_process_ID_VV3body
+from include.utils import get_process_ID_iterate_2prong, get_first_ino_ID     # For ino-jet
 
 num_particle_IDs = 6
 num_jet_IDs = 8
@@ -56,13 +57,24 @@ print("Number of jets: ", numpass, " from ", numevents, " events.", flush=True)
 
 # Fill out the numpy array
 
-jets_np = np.zeros((numpass,200,3 + num_particle_IDs))
+
 if event_type == "VV3body":
     jet_IDs = np.zeros((numpass,num_jet_IDs))
 elif event_type == "Zq":
     jet_IDs = np.ones(numpass)
 elif event_type == "Zg":
     jet_IDs = np.zeros(numpass)
+elif event_type == "ino":
+    jet_IDs = np.array(np.zeros(numpass),dtype=[('nW','int32'),
+                             ('nZ','int32'),
+                             ('nh','int32'),
+                             ('nq','int32'),
+                             ('nb','int32'),
+                             ('nnu','int32'),
+                             ('nl','int32'),
+                             ('ntau','int32')])
+    
+jets_np = np.zeros((numpass,200,3 + num_particle_IDs))
     
 index = 0
 j = 0
@@ -99,6 +111,8 @@ try:
         jets_np[index] = particles_np_padded
         if event_type == "VV3body":
             jet_IDs[index] = get_process_ID_VV3body(branchParticle)
+        if event_type == "ino":
+            jet_IDs[index] = get_process_ID_iterate_2prong(get_first_ino_ID(branchParticle),jet_IDs[index],branchParticle)
 
         index += 1
 except:
