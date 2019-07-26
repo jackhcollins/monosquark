@@ -4,6 +4,46 @@ ROOT.gSystem.Load("libDelphes")
 ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
 ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
 
+
+quarks = np.array([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,21])
+bottom = np.array([5,-5])
+leptons = np.array([11,13,-11,-13])
+neutrinos = np.array([12,14,16,-12,-14,-16])
+tau = np.array([15,-15])
+
+PIDs = {}
+PIDs['q'] = np.array([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,21])
+PIDs['b'] = np.array([5,-5])
+PIDs['l'] = leptons
+PIDs['nu'] = neutrinos
+PIDs['tau'] = tau
+PIDs['W'] = np.array([24,-24])
+PIDs['h'] = np.array([25])
+PIDs['Z'] = np.array([23])
+PIDs['V'] = np.concatenate((PIDs['W'],
+                           PIDs['h'],
+                           PIDs['Z']))
+
+
+inos = np.append(np.arange(1000023,1000100),np.arange(-1000100,-1000022))
+LSPs = np.array([1000022,-1000022])
+squarks = np.concatenate((np.arange(1000001,1000006),
+                          np.arange(2000001,2000006),
+                          np.arange(-1000005,-1000000),
+                          np.arange(-2000005,-2000000)))
+
+PIDs['squark'] = squarks
+PIDs['LSP'] = LSPs
+PIDs['ino'] = inos
+
+PIDs['final'] = np.concatenate((PIDs['q'],
+                                PIDs['b'],
+                                PIDs['l'],
+                                PIDs['nu'],
+                                PIDs['tau'],
+                                PIDs['LSP']))
+
+
 def pTof(obj):
     if isinstance(obj,ROOT.Track):
         return obj.PT
@@ -66,20 +106,108 @@ def find_last(startID,branchParticle):
                 return next_entry
     raise
 
-def get_process_ID_VV3body(branchParticle):
-
-    quarks = np.array([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,21])
-    bottom = np.array([5,-5])
-    leptons = np.array([11,13,-11,-13])
-    neutrinos = np.array([12,14,16,-12,-14,-16])
-    tau = np.array([15,-15])
     
-    inos = np.append(np.arange(1000023,1000100),np.arange(-1000100,-1000022))
-    LSPs = np.array([1000022,-1000022])
-    squarks = np.concatenate((np.arange(1000001,1000006),
-                              np.arange(2000001,2000006),
-                              np.arange(-1000005,-1000000),
-                              np.arange(-2000005,-2000000)))
+def get_all_daughters(startID,branchParticle,stopnum = -1):
+    daughters = []
+    daughter_IDs = []
+
+    for i in range(startID+1,branchParticle.GetEntriesFast()):
+        part = branchParticle.At(i)
+        if part.M1 == startID:
+            daughters.append(part)
+            daughter_IDs.append(i)
+        if len(daughters) == stopnum:
+            break
+         
+    return daughter_IDs, daughters
+
+
+def update_event_ID(event_ID, PID):
+    if np.any(PID == PIDs['W']):
+        event_ID['nW'] += 1
+    elif np.any(PID == PIDs['Z']):
+        event_ID['nZ'] += 1
+    elif np.any(PID == PIDs['h']):
+        event_ID['nh'] += 1
+    elif np.any(PID == PIDs['q']):
+        event_ID['nq'] += 1
+    elif np.any(PID == PIDs['b']):
+        event_ID['nb'] += 1
+    elif np.any(PID == PIDs['l']):
+        event_ID['nl'] += 1
+    elif np.any(PID == PIDs['tau']):
+        event_ID['ntau'] += 1
+    elif np.any(PID == PIDs['nu']):
+        event_ID['nnu'] += 1
+                
+    return event_ID
+
+
+def get_process_ID_iterate_2prong(winoID,event_ID,branchParticle):
+    
+#     event_ID = np.array(0,dtype=[('nW','int32'),
+#                                  ('nZ','int32'),
+#                                  ('nh','int32'),
+#                                  ('nl','int32'),
+#                                  ('nq','int32'),
+#                                  ('nb','int32'),
+#                                  ('ntau','int32'),
+#                                  ('nnu','int32')])
+
+    
+    last_wino_ID = find_last(winoID,branchParticle)
+    last_wino = branchParticle.At(last_wino_ID)
+    
+    if last_wino.D1 == last_wino.D2 or last_wino.D2 == -1 or last_wino.D1 == -1:
+        raise
+       
+    daughter_IDs = [last_wino.D1,last_wino.D2]
+    daughters = [branchParticle.At(daughter_IDs[0]), branchParticle.At(daughter_IDs[1])]
+    
+    for i, daughter in enumerate(daughters):
+        D_PID = daughter.PID
+        print(D_PID)
+        event_ID = update_event_ID(event_ID,D_PID)
+        if not np.any(D_PID == PIDs['final']):
+            event_ID = get_process_ID_iterate_2prong(daughter_IDs[i],event_ID,branchParticle)
+
+    return event_ID
+
+
+def get_first_ino_ID(branchParticle):
+    
+    for i in range(branchParticle.GetEntriesFast()):
+        if np.any(branchParticle.At(i) == PIDs["ino"]):
+            return i
+        
+    print("Error: Failed to find a -ino")
+    raise
+    
+    
+def get_first_squark_ID(branchParticle):
+    
+    for i in range(branchParticle.GetEntriesFast()):
+        if np.any(branchParticle.At(i) == PIDs["squark"]):
+            return i
+        
+    print("Error: Failed to find a squark")
+    raise
+    
+
+def get_squark_ino_ID(branchParticle):
+    
+    squark_ID = find_last(get_first_squark_ID,branchParticle)
+    
+    for i in range(squark_ID+1,branchParticle.GetEntriesFast()):
+        part = branchParticle.At(i)
+        if part.M1 == squark_ID and np.any(part.PID == PIDs['ino'] or part.PID == PIDs['LSP']):
+            return i
+
+    print("Failed to find a squark-ino")
+    raise
+    
+
+def get_process_ID_VV3body(branchParticle):
 
     ino = None
     LSP = None
@@ -154,3 +282,43 @@ def get_process_ID_VV3body(branchParticle):
             break
         
     return np.array([nW,nZ,nh,nq,nl,nnu,ntau,nb])
+
+
+def PtEtaPhiMvec_to_pxpypzEvec(PtEtaPhiMvec):
+    thetavec = 2*np.arctan(np.exp(-PtEtaPhiMvec[:,1]))
+    phivec = PtEtaPhiMvec[:,2]
+    pzvec = PtEtaPhiMvec[:,0]/np.tan(thetavec)
+    pxvec = PtEtaPhiMvec[:,0]*np.cos(phivec)
+    pyvec = PtEtaPhiMvec[:,0]*np.sin(phivec)
+    Evec = np.sqrt(PtEtaPhiMvec[:,3]*PtEtaPhiMvec[:,3]+
+                  pxvec*pxvec+
+                  pyvec*pyvec+
+                  pzvec*pzvec)
+    return np.stack((pxvec,pyvec,pzvec,Evec),axis=-1)
+
+
+def PtEtaPhiMeventlist_to_pxpypzEeventlist(PtEtaPhiMvec):
+    thetavec = 2*np.arctan(np.exp(-PtEtaPhiMvec[:,:,1]))
+    phivec = PtEtaPhiMvec[:,:,2]
+    pzvec = PtEtaPhiMvec[:,:,0]/np.tan(thetavec)
+    pxvec = PtEtaPhiMvec[:,:,0]*np.cos(phivec)
+    pyvec = PtEtaPhiMvec[:,:,0]*np.sin(phivec)
+    Evec = np.sqrt(PtEtaPhiMvec[:,:,3]*PtEtaPhiMvec[:,:,3]+
+                  pxvec*pxvec+
+                  pyvec*pyvec+
+                  pzvec*pzvec)
+    return np.stack((pxvec,pyvec,pzvec,Evec),axis=-1)
+
+
+def pxpypzE_to_M(pxpypzE):
+    return np.sqrt(pxpypzE[3]*pxpypzE[3] - np.power(np.linalg.norm(pxpypzE[:3]),2))
+
+
+def PtEtaPhiMvec_to_M(PtEtaPhiMvec):
+    jet4vec = np.sum(PtEtaPhiMvec_to_pxpypzEvec(PtEtaPhiMvec),axis=0)
+    return pxpypzE_to_M(jet4vec)
+    
+
+def event_list_to_PtEtaPhiM_list(event_list):
+    numevents, numparticles = event_list.shape[:2]
+    return np.append(event_list[:,:,:3],np.zeros((numevents,numparticles,1)),axis=-1)
