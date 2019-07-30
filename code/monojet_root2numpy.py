@@ -13,7 +13,7 @@ num_jet_IDs = 8
 inputFile = sys.argv[1]
 outputFile = sys.argv[2]
 R = "12"
-event_type = "VV3body"
+event_type = ""
 if len(sys.argv) > 3:
     R = sys.argv[3]
 if len(sys.argv) > 4:
@@ -73,6 +73,8 @@ elif event_type == "ino":
                              ('nnu','int32'),
                              ('nl','int32'),
                              ('ntau','int32')])
+else:
+    jet_IDs = np.zeros(numpass)
     
 jets_np = np.zeros((numpass,200,3 + num_particle_IDs))
     
@@ -109,6 +111,7 @@ try:
             particles_np_padded[:len(particles_np)] = particles_np
             
         jets_np[index] = particles_np_padded
+
         if event_type == "VV3body":
             jet_IDs[index] = get_process_ID_VV3body(branchParticle)
         if event_type == "ino":
