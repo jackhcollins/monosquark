@@ -5,7 +5,7 @@ ROOT.gInterpreter.Declare('#include "classes/DelphesClasses.h"')
 ROOT.gInterpreter.Declare('#include "external/ExRootAnalysis/ExRootTreeReader.h"')
 
 
-quarks = np.array([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,21])
+quarks = np.array([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6])
 bottom = np.array([5,-5])
 leptons = np.array([11,13,-11,-13])
 neutrinos = np.array([12,14,16,-12,-14,-16])
@@ -13,7 +13,9 @@ tau = np.array([15,-15])
 photon = np.array([22])
 
 PIDs = {}
-PIDs['q'] = np.array([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,21])
+PIDs['q'] = np.array([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6])
+PIDs['g'] = np.array([21])
+PIDs['j'] = np.concatenate((PIDs['q'],PIDs['g']))
 PIDs['b'] = np.array([5,-5])
 PIDs['l'] = leptons
 PIDs['nu'] = neutrinos
@@ -38,7 +40,7 @@ PIDs['squark'] = squarks
 PIDs['LSP'] = LSPs
 PIDs['ino'] = inos
 
-PIDs['final'] = np.concatenate((PIDs['q'],
+PIDs['final'] = np.concatenate((PIDs['j'],
                                 PIDs['b'],
                                 PIDs['l'],
                                 PIDs['nu'],
@@ -110,7 +112,7 @@ def find_last(startID,branchParticle):
     raise
 
     
-def get_all_daughters(startID,branchParticle,stopnum = -1):
+def get_all_daughters(startID,branchParticle,stopnum = -1,debug=0):
     daughters = []
     daughter_IDs = []
 
@@ -146,24 +148,39 @@ def update_event_ID(event_ID, PID):
     return event_ID
 
 
-def get_process_ID_iterate_2prong(winoID,event_ID,branchParticle,debug = False):
+def get_process_ID_iterate(winoID,event_ID,branchParticle,debug = False, twoprong = False):
    
+    if np.any(branchParticle.At(winoID).PID == PIDs['LSP']):
+        return event_ID
+
     last_wino_ID = find_last(winoID,branchParticle)
     last_wino = branchParticle.At(last_wino_ID)
     
+
+    
     if last_wino.D1 == last_wino.D2 or last_wino.D2 == -1 or last_wino.D1 == -1:
+        print("Invalid daughters")
         raise
        
-    daughter_IDs = [last_wino.D1,last_wino.D2]
-    daughters = [branchParticle.At(daughter_IDs[0]), branchParticle.At(daughter_IDs[1])]
+    if twoprong:
+        daughter_IDs = [last_wino.D1,last_wino.D2]
+        daughters = [branchParticle.At(daughter_IDs[0]), branchParticle.At(daughter_IDs[1])]
+    else:
+        if debug > 2:
+            print("Finding daughters")
+        daughter_IDs, daughters = get_all_daughters(last_wino_ID,branchParticle,debug=debug)
+        
+        if len(daughter_IDs) is 0:
+            print("No daughters found")
+            raise
     
     for i, daughter in enumerate(daughters):
         D_PID = daughter.PID
-        if debug:
+        if debug > 1:
             print(D_PID)
         event_ID = update_event_ID(event_ID,D_PID)
         if not np.any(D_PID == PIDs['final']):
-            event_ID = get_process_ID_iterate_2prong(daughter_IDs[i],event_ID,branchParticle,debug)
+            event_ID = get_process_ID_iterate(daughter_IDs[i],event_ID,branchParticle,debug=debug,twoprong=twoprong)
 
     return event_ID
 
@@ -178,27 +195,52 @@ def get_first_ino_ID(branchParticle):
     raise
     
     
-def get_first_squark_ID(branchParticle):
+def get_first_squark_ID(branchParticle, debug = False):
     
     for i in range(branchParticle.GetEntriesFast()):
-        if np.any(branchParticle.At(i) == PIDs["squark"]):
+        if np.any(branchParticle.At(i).PID == PIDs["squark"]):
             return i
         
     print("Error: Failed to find a squark")
     raise
     
 
-def get_squark_ino_ID(branchParticle):
+def get_squark_ino_ID(branchParticle, squark_ID = None,debug = 0):
     
-    squark_ID = find_last(get_first_squark_ID,branchParticle)
+    if squark_ID is None:
+        squark_ID = find_last(get_first_squark_ID,branchParticle)
+    else:
+        squark_ID = find_last(squark_ID,branchParticle)
     
     for i in range(squark_ID+1,branchParticle.GetEntriesFast()):
         part = branchParticle.At(i)
-        if part.M1 == squark_ID and np.any(part.PID == PIDs['ino'] or part.PID == PIDs['LSP']):
+        if debug > 2:
+            print(i, part.PID, part.M1, part.M2)
+        if part.M1 == squark_ID and (np.any(part.PID == PIDs['ino']) or np.any(part.PID == PIDs['LSP'])):
+            if debug > 0:
+                print("squark_ino_ID found:",i)
             return i
 
     print("Failed to find a squark-ino")
     raise
+    
+def get_squark_q_ID(branchParticle, squark_ID = None,debug=0):
+    
+    if squark_ID is None:
+        squark_ID = find_last(get_first_squark_ID,branchParticle)
+    else:
+        squark_ID = find_last(squark_ID,branchParticle)
+    
+    for i in range(squark_ID+1,branchParticle.GetEntriesFast()):
+        part = branchParticle.At(i)
+        if debug > 2:
+            print(i, part.PID, part.M1, part.M2, np.any(part.PID == PIDs['q']))
+        if part.M1 == squark_ID and np.any(part.PID == PIDs['q']):
+            return i
+
+    print("Failed to find a squark-q")
+    raise
+   
     
 
 def get_process_ID_VV3body(branchParticle):
