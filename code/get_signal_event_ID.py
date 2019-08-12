@@ -117,11 +117,11 @@ try:
         if (debug > 0):
             print("Getting boosted wino process ID") 
             print(boosted_wino_idx)
-        boosted_wino_ID = get_process_ID_iterate(boosted_wino_idx,empty_event_ID,branchParticle,debug=debug)
+        boosted_wino_ID = get_process_ID_iterate(boosted_wino_idx,np.copy(empty_event_ID),branchParticle,debug=debug)
 
         if (debug > 0):
             print("Getting ass-wino process ID")
-        ass_wino_ID = get_process_ID_iterate(ass_wino_idx,empty_event_ID,branchParticle,debug=debug)
+        ass_wino_ID = get_process_ID_iterate(ass_wino_idx,np.copy(empty_event_ID),branchParticle,debug=debug)
 
         jet_IDs['nW'][index] = boosted_wino_ID['nW'][0]
         jet_IDs['nZ'][index] = boosted_wino_ID['nZ'][0]
